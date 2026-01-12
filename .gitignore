@@ -1,0 +1,29 @@
+# Build artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.o
+*.obj
+*.pdb
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# CTest
+Testing/
+LastTest.log
+
+# Doxygen output
+/docs/html/
+
+# Generated instances/results
+*.json
