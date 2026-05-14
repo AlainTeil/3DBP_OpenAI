@@ -21,7 +21,7 @@ ctest --preset debug
 
 cmake --preset release
 cmake --build --preset release
-ctest --test-dir build/release --output-on-failure
+ctest --preset release
 ```
 
 Sanitizer builds use the `asan-ubsan` preset:
@@ -32,6 +32,14 @@ ctest --preset asan-ubsan
 ```
 
 ## Tests
+For preset builds, run the matching CTest preset:
+```bash
+ctest --preset debug
+ctest --preset release
+ctest --preset asan-ubsan
+```
+
+For the manual `cmake -S . -B build` layout, run:
 ```bash
 ctest --test-dir build --output-on-failure
 ```
@@ -203,4 +211,4 @@ The GitHub Actions workflow runs:
 ## Formatting and analysis
 - clang-format: see .clang-format
 - clang-tidy: see .clang-tidy
-- Doxygen: `cmake --build build --target docs` (if Doxygen is available)
+- Doxygen: configure a docs-enabled build, then run `cmake --build build --target docs` (if Doxygen is available). The provided presets set `THREEDBP_BUILD_DOCS=OFF`.
