@@ -3,6 +3,8 @@
 
 #include "bp/packer.hpp"
 
+#include "test_helpers.hpp"
+
 using namespace bp;
 
 TEST(Integration, ThisSideUpRespected) {
@@ -13,9 +15,9 @@ TEST(Integration, ThisSideUpRespected) {
 
     auto res = pack(inst, PackOptions{AlgorithmId::FFD, 123u, 20});
     ASSERT_TRUE(res.feasible);
-    const auto it = std::find_if(res.placements.begin(), res.placements.end(), [](const Placement& p) {
-        return p.box_id == "upright";
-    });
+    expect_valid_packing(inst, res);
+    const auto it = std::find_if(res.placements.begin(), res.placements.end(),
+                                 [](const Placement &p) { return p.box_id == "upright"; });
     ASSERT_NE(it, res.placements.end());
     EXPECT_EQ(it->orientation.h, 6);
 }
@@ -28,6 +30,7 @@ TEST(Integration, GuillotinePacksTwoSlabs) {
 
     auto res = pack(inst, PackOptions{AlgorithmId::Guillotine, 0u, 10});
     ASSERT_TRUE(res.feasible);
+    expect_valid_packing(inst, res);
     EXPECT_EQ(res.objective.bins_used, 1);
     EXPECT_EQ(res.objective.leftover_volume, 0);
 }
@@ -42,4 +45,5 @@ TEST(Integration, MetaHeuristicFindsFeasible) {
     auto res = pack(inst, PackOptions{AlgorithmId::MetaGA, 42u, 8});
     EXPECT_TRUE(res.feasible);
     EXPECT_EQ(res.objective.bins_used, 1);
+    expect_valid_packing(inst, res);
 }

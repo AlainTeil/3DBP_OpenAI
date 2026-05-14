@@ -14,7 +14,7 @@
 
 namespace {
 
-bp::AlgorithmId parse_algo(const std::string& name) {
+bp::AlgorithmId parse_algo(const std::string &name) {
     static const std::unordered_map<std::string, bp::AlgorithmId> map = {
         {"ffd", bp::AlgorithmId::FFD},
         {"nfdh", bp::AlgorithmId::NFDH},
@@ -38,9 +38,9 @@ void usage() {
               << "             [--verbose 0|1|2] [--csv placements.csv]\n";
 }
 
-}  // namespace
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     std::string input;
     std::string output;
     std::string algo_name;
@@ -88,51 +88,65 @@ int main(int argc, char** argv) {
         if (!output.empty()) {
             bp::save_result(result, output);
         } else {
-            fmt::print("{}\n", result.feasible ? "feasible" : "infeasible");
+            fmt::print("{}\n", bp::to_string(result.status));
             fmt::print("bins_used: {}\n", result.objective.bins_used);
             fmt::print("leftover_volume: {}\n", result.objective.leftover_volume);
+            if (!result.unplaced_box_ids.empty()) {
+                fmt::print("unplaced_boxes: {}\n", result.unplaced_box_ids.size());
+            }
         }
 
         if (!csv_path.empty()) {
             std::ofstream csv(csv_path);
+            if (!csv) {
+                throw std::runtime_error("Failed to open CSV output file: " + csv_path);
+            }
             csv << "bin_id,box_id,x,y,z,w,l,h\n";
-            for (const auto& p : result.placements) {
-                csv << p.bin_id << ',' << p.box_id << ',' << p.position.w << ',' << p.position.l << ',' << p.position.h << ','
-                    << p.orientation.w << ',' << p.orientation.l << ',' << p.orientation.h << "\n";
+            for (const auto &p : result.placements) {
+                csv << p.bin_id << ',' << p.box_id << ',' << p.position.w << ',' << p.position.l << ',' << p.position.h
+                    << ',' << p.orientation.w << ',' << p.orientation.l << ',' << p.orientation.h << "\n";
             }
         }
 
         if (verbose > 0) {
-            fmt::print("boxes: placed {} / {}\n", result.stats.boxes_placed, result.stats.boxes_total);
-            fmt::print("volume: packed {} / {} (fill {:.2f}%)\n", result.stats.volume_packed, result.stats.volume_bins_used,
-                       result.stats.fill_ratio * 100.0);
+            fmt::print("boxes: placed {} / {}, unplaced {}\n", result.stats.boxes_placed, result.stats.boxes_total,
+                       result.stats.boxes_unplaced);
+            fmt::print("volume: packed {} / {} (fill {:.2f}%)\n", result.stats.volume_packed,
+                       result.stats.volume_bins_used, result.stats.fill_ratio * 100.0);
             fmt::print("seed: {}  iterations: {}  algo: {}\n", result.metadata.seed, result.metadata.iterations,
                        result.metadata.algorithm);
             if (!result.metadata.timestamp.empty()) {
                 fmt::print("timestamp: {}\n", result.metadata.timestamp);
             }
+            for (const auto &error : result.validation_errors) {
+                fmt::print("validation: {}\n", error);
+            }
         }
 
         if (verbose > 1) {
             std::map<std::string, std::vector<bp::Placement>> by_bin;
-            for (const auto& p : result.placements) {
+            for (const auto &p : result.placements) {
                 by_bin[p.bin_id].push_back(p);
             }
-            for (auto& [bin_id, vec] : by_bin) {
-                std::sort(vec.begin(), vec.end(), [](const bp::Placement& a, const bp::Placement& b) {
-                    if (a.position.h != b.position.h) return a.position.h < b.position.h;
-                    if (a.position.l != b.position.l) return a.position.l < b.position.l;
+            for (auto &[bin_id, vec] : by_bin) {
+                std::sort(vec.begin(), vec.end(), [](const bp::Placement &a, const bp::Placement &b) {
+                    if (a.position.h != b.position.h) {
+                        return a.position.h < b.position.h;
+                    }
+                    if (a.position.l != b.position.l) {
+                        return a.position.l < b.position.l;
+                    }
                     return a.position.w < b.position.w;
                 });
                 fmt::print("Bin {}:\n", bin_id);
-                for (const auto& p : vec) {
-                    fmt::print("  {} at ({},{},{}) size ({},{},{})\n", p.box_id, p.position.w, p.position.l, p.position.h,
-                               p.orientation.w, p.orientation.l, p.orientation.h);
+                for (const auto &p : vec) {
+                    fmt::print("  {} at ({},{},{}) size ({},{},{})\n", p.box_id, p.position.w, p.position.l,
+                               p.position.h, p.orientation.w, p.orientation.l, p.orientation.h);
                 }
             }
         }
-        return result.feasible ? 0 : 2;
-    } catch (const std::exception& ex) {
+        return result.status == bp::PackingStatus::Feasible ? 0 : 2;
+    } catch (const std::exception &ex) {
         std::cerr << "Error: " << ex.what() << "\n";
         return 1;
     }

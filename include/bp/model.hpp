@@ -1,7 +1,7 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace bp {
@@ -16,9 +16,7 @@ struct Vec3 {
     int h{0};
 };
 
-inline bool operator==(const Vec3& a, const Vec3& b) {
-    return a.w == b.w && a.l == b.l && a.h == b.h;
-}
+inline bool operator==(const Vec3 &a, const Vec3 &b) { return a.w == b.w && a.l == b.l && a.h == b.h; }
 
 /// A single box to be packed.
 struct Box {
@@ -74,6 +72,8 @@ struct PackingStats {
     int boxes_total{0};
     /// Boxes successfully placed.
     int boxes_placed{0};
+    /// Boxes that were not placed.
+    int boxes_unplaced{0};
     /// Sum of all box volumes.
     long long volume_boxes{0};
     /// Packed volume of placed boxes.
@@ -98,12 +98,30 @@ struct RunMetadata {
     std::string timestamp;
 };
 
+/// High-level outcome of a packing run.
+enum class PackingStatus : std::uint8_t {
+    /// All boxes were placed and the result passed validation.
+    Feasible,
+    /// Some boxes were placed and unplaced_box_ids contains the missing boxes.
+    Partial,
+    /// No boxes were placed.
+    Infeasible,
+    /// Returned placements failed validation.
+    Invalid
+};
+
 /// Full result of a packing run.
 struct PackingResult {
-    /// True when a valid packing was found.
+    /// Detailed status of the packing run.
+    PackingStatus status{PackingStatus::Infeasible};
+    /// Compatibility shortcut for status == PackingStatus::Feasible.
     bool feasible{false};
     /// Placements for all packed boxes.
     std::vector<Placement> placements;
+    /// Box identifiers that could not be placed.
+    std::vector<std::string> unplaced_box_ids;
+    /// Validation or algorithm diagnostics, if any.
+    std::vector<std::string> validation_errors;
     /// Objective outcomes.
     Objective objective;
     /// Packing statistics.
@@ -122,12 +140,18 @@ struct Space {
     bool allow_stack{true};
 };
 
-std::vector<Vec3> orientations_for(const Box& box);
+std::vector<Vec3> orientations_for(const Box &box);
 
-bool fits(const Vec3& item, const Space& space);
+bool fits(const Vec3 &item, const Space &space);
 
-bool overlaps(const Placement& a, const Placement& b);
+bool overlaps(const Placement &a, const Placement &b);
 
-long long volume(const Vec3& v);
+long long volume(const Vec3 &v);
 
-}  // namespace bp
+/// Convert a packing status to its JSON/CLI spelling.
+std::string to_string(PackingStatus status);
+
+/// Parse a JSON/CLI status string.
+PackingStatus packing_status_from_string(const std::string &value);
+
+} // namespace bp

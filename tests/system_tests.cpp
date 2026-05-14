@@ -7,6 +7,8 @@
 #include "bp/instance_io.hpp"
 #include "bp/packer.hpp"
 
+#include "test_helpers.hpp"
+
 using namespace bp;
 
 TEST(System, PipelineRoundTripJson) {
@@ -23,16 +25,17 @@ TEST(System, PipelineRoundTripJson) {
     auto loaded_inst = load_instance(inst_path.string());
 
     auto result = pack(loaded_inst, PackOptions{AlgorithmId::MaximalSpace, 7u, 10});
+    expect_valid_packing(loaded_inst, result);
     save_result(result, res_path.string());
     auto loaded_res = load_result(res_path.string());
 
     EXPECT_EQ(loaded_res.feasible, result.feasible);
+    EXPECT_EQ(loaded_res.status, result.status);
     ASSERT_EQ(loaded_res.placements.size(), result.placements.size());
     EXPECT_EQ(loaded_res.objective.bins_used, 1);
     // Ensure no stacking occurred above the no-stack base.
-    const auto top_it = std::find_if(loaded_res.placements.begin(), loaded_res.placements.end(), [](const Placement& p) {
-        return p.box_id == "top";
-    });
+    const auto top_it = std::find_if(loaded_res.placements.begin(), loaded_res.placements.end(),
+                                     [](const Placement &p) { return p.box_id == "top"; });
     ASSERT_NE(top_it, loaded_res.placements.end());
     EXPECT_EQ(top_it->position.h, 0);
 }
@@ -50,4 +53,5 @@ TEST(System, OnlineFFDHandlesStream) {
     auto res = pack(inst, PackOptions{AlgorithmId::OnlineFFD, 123u, 0});
     EXPECT_TRUE(res.feasible);
     EXPECT_LE(res.objective.bins_used, 1);
+    expect_valid_packing(inst, res);
 }

@@ -6,10 +6,10 @@
 
 namespace bp::algorithms {
 
-PackingResult next_fit_decreasing_height(const Instance& instance, unsigned int seed) {
+PackingResult next_fit_decreasing_height(const Instance &instance, unsigned int seed) {
     (void)seed;
     std::vector<Box> ordered = instance.boxes;
-    std::sort(ordered.begin(), ordered.end(), [](const Box& a, const Box& b) {
+    std::sort(ordered.begin(), ordered.end(), [](const Box &a, const Box &b) {
         if (a.size.h != b.size.h) {
             return a.size.h > b.size.h;
         }
@@ -18,4 +18,4 @@ PackingResult next_fit_decreasing_height(const Instance& instance, unsigned int 
     return greedy_pack(instance, ordered, GreedyConfig{SplitPolicy::Maximal});
 }
 
-}  // namespace bp::algorithms
+} // namespace bp::algorithms

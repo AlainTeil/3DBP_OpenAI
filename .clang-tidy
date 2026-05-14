@@ -1,4 +1,5 @@
 Checks: >
-  clang-analyzer-*,performance-*,readability-*,modernize-*,cppcoreguidelines-*,bugprone-*
+  clang-analyzer-*,bugprone-*,performance-*,modernize-use-nullptr,modernize-use-override,
+  readability-braces-around-statements,readability-container-contains,readability-redundant-string-init
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'

@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ clang-format cppcheck
+      - name: Configure
+        run: cmake --preset debug
+      - name: Build
+        run: cmake --build --preset debug
+      - name: Test
+        run: ctest --preset debug
+      - name: Install package
+        run: cmake --install build/debug --prefix build/debug/install
+      - name: Configure package smoke test
+        run: cmake -S tests/package_smoke -B build/package-smoke -DCMAKE_PREFIX_PATH="$PWD/build/debug/install"
+      - name: Build package smoke test
+        run: cmake --build build/package-smoke
+      - name: Run package smoke test
+        run: ./build/package-smoke/three_dbp_package_smoke
+      - name: Format check
+        run: find include src apps tests \( -name '*.cpp' -o -name '*.hpp' \) -print | xargs clang-format --dry-run --Werror
+      - name: Static analysis
+        run: cppcheck --enable=warning,style,performance,portability --std=c++20 --suppress=missingIncludeSystem -I include src apps tests
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++
+      - name: Configure ASan/UBSan
+        run: cmake --preset asan-ubsan
+      - name: Build ASan/UBSan
+        run: cmake --build --preset asan-ubsan
+      - name: Test ASan/UBSan
+        run: ctest --preset asan-ubsan

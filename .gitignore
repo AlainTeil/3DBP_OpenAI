@@ -1,5 +1,6 @@
 # Build artifacts
 build/
+build-*/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
@@ -25,5 +26,9 @@ LastTest.log
 # Doxygen output
 /docs/html/
 
+# Local audit reports and evidence
+audit/
+
 # Generated instances/results
 *.json
+!CMakePresets.json

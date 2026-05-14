@@ -3,6 +3,8 @@
 
 #include "bp/packer.hpp"
 
+#include "test_helpers.hpp"
+
 using namespace bp;
 
 TEST(EdgeCases, NoBinsInfeasible) {
@@ -10,7 +12,9 @@ TEST(EdgeCases, NoBinsInfeasible) {
     inst.boxes.push_back(Box{.id = "a", .size = Vec3{1, 1, 1}});
     auto res = pack(inst, PackOptions{AlgorithmId::FFD, 0u, 5});
     EXPECT_FALSE(res.feasible);
+    EXPECT_EQ(res.status, PackingStatus::Infeasible);
     EXPECT_TRUE(res.placements.empty());
+    EXPECT_THAT(res.unplaced_box_ids, ::testing::ElementsAre("a"));
 }
 
 TEST(EdgeCases, EmptyBoxesTriviallyFeasible) {
@@ -18,8 +22,10 @@ TEST(EdgeCases, EmptyBoxesTriviallyFeasible) {
     inst.bins.push_back(Bin{.id = "bin-0", .size = Vec3{5, 5, 5}});
     auto res = pack(inst, PackOptions{AlgorithmId::FFD, 0u, 5});
     EXPECT_TRUE(res.feasible);
+    EXPECT_EQ(res.status, PackingStatus::Feasible);
     EXPECT_EQ(res.objective.bins_used, 0);
     EXPECT_EQ(res.objective.leftover_volume, 0);
+    expect_valid_packing(inst, res);
 }
 
 TEST(EdgeCases, BoxExactlyFitsBin) {
@@ -30,6 +36,7 @@ TEST(EdgeCases, BoxExactlyFitsBin) {
     ASSERT_TRUE(res.feasible);
     EXPECT_EQ(res.objective.bins_used, 1);
     EXPECT_EQ(res.objective.leftover_volume, 0);
+    expect_valid_packing(inst, res);
 }
 
 TEST(EdgeCases, OversizeBoxInfeasible) {
@@ -38,6 +45,8 @@ TEST(EdgeCases, OversizeBoxInfeasible) {
     inst.boxes.push_back(Box{.id = "big", .size = Vec3{3, 2, 2}});
     auto res = pack(inst, PackOptions{AlgorithmId::FFD, 0u, 5});
     EXPECT_FALSE(res.feasible);
+    EXPECT_EQ(res.status, PackingStatus::Infeasible);
+    EXPECT_THAT(res.unplaced_box_ids, ::testing::ElementsAre("big"));
 }
 
 TEST(EdgeCases, OnlineFFDHandlesSingleTallBox) {
@@ -47,4 +56,5 @@ TEST(EdgeCases, OnlineFFDHandlesSingleTallBox) {
     auto res = pack(inst, PackOptions{AlgorithmId::OnlineFFD, 0u, 0});
     EXPECT_TRUE(res.feasible);
     EXPECT_EQ(res.objective.bins_used, 1);
+    expect_valid_packing(inst, res);
 }
