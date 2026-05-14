@@ -1,10 +1,11 @@
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include <fmt/core.h>
@@ -14,28 +15,44 @@
 
 namespace {
 
+struct AlgorithmSpec {
+    const char *name;
+    bp::AlgorithmId id;
+    const char *description;
+};
+
+constexpr std::array<AlgorithmSpec, 9> algorithms{{
+    {"ffd", bp::AlgorithmId::FFD, "offline deterministic greedy first-fit, descending volume"},
+    {"nfdh", bp::AlgorithmId::NFDH, "offline deterministic greedy first-fit, descending height then volume"},
+    {"layer", bp::AlgorithmId::Layered, "offline deterministic greedy first-fit, descending height then base area"},
+    {"guillotine", bp::AlgorithmId::Guillotine, "offline deterministic greedy packer with guillotine residual spaces"},
+    {"maxspace", bp::AlgorithmId::MaximalSpace, "offline deterministic greedy first-fit, largest side then volume"},
+    {"meta-ga", bp::AlgorithmId::MetaGA, "offline stochastic genetic search over greedy orderings"},
+    {"meta-grasp", bp::AlgorithmId::MetaGRASP, "offline stochastic randomized greedy ordering search"},
+    {"meta-sa", bp::AlgorithmId::MetaSA, "offline stochastic simulated annealing over greedy orderings"},
+    {"online-ffd", bp::AlgorithmId::OnlineFFD, "online deterministic greedy first-fit in input order"},
+}};
+
 bp::AlgorithmId parse_algo(const std::string &name) {
-    static const std::unordered_map<std::string, bp::AlgorithmId> map = {
-        {"ffd", bp::AlgorithmId::FFD},
-        {"nfdh", bp::AlgorithmId::NFDH},
-        {"layer", bp::AlgorithmId::Layered},
-        {"guillotine", bp::AlgorithmId::Guillotine},
-        {"maxspace", bp::AlgorithmId::MaximalSpace},
-        {"meta-ga", bp::AlgorithmId::MetaGA},
-        {"meta-grasp", bp::AlgorithmId::MetaGRASP},
-        {"meta-sa", bp::AlgorithmId::MetaSA},
-        {"online-ffd", bp::AlgorithmId::OnlineFFD},
-    };
-    auto it = map.find(name);
-    if (it == map.end()) {
-        throw std::runtime_error("Unknown algorithm: " + name);
+    for (const auto &algorithm : algorithms) {
+        if (name == algorithm.name) {
+            return algorithm.id;
+        }
     }
-    return it->second;
+    throw std::runtime_error("Unknown algorithm: " + name);
+}
+
+void list_algorithms() {
+    fmt::print("Available algorithms:\n");
+    for (const auto &algorithm : algorithms) {
+        fmt::print("  {:<11} {}\n", algorithm.name, algorithm.description);
+    }
 }
 
 void usage() {
     std::cerr << "Usage: pack --input file.json --algo <name> [--seed N] [--iterations N] [--output out.json]\n"
-              << "             [--verbose 0|1|2] [--csv placements.csv]\n";
+              << "             [--verbose 0|1|2] [--csv placements.csv]\n"
+              << "       pack --list-algorithms\n";
 }
 
 } // namespace
@@ -48,6 +65,7 @@ int main(int argc, char **argv) {
     int iterations = 200;
     int verbose = 0;
     std::string csv_path;
+    bool should_list_algorithms = false;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -65,10 +83,17 @@ int main(int argc, char **argv) {
             verbose = std::stoi(argv[++i]);
         } else if (arg == "--csv" && i + 1 < argc) {
             csv_path = argv[++i];
+        } else if (arg == "--list-algorithms") {
+            should_list_algorithms = true;
         } else if (arg == "--help") {
             usage();
             return 0;
         }
+    }
+
+    if (should_list_algorithms) {
+        list_algorithms();
+        return 0;
     }
 
     if (input.empty() || algo_name.empty()) {

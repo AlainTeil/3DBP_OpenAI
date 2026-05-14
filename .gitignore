@@ -31,4 +31,8 @@ audit/
 
 # Generated instances/results
 *.json
+*.csv
 !CMakePresets.json
+!benchmarks/
+!benchmarks/corpus/
+!benchmarks/corpus/*.json

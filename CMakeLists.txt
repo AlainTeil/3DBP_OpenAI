@@ -75,6 +75,10 @@ add_executable(three_dbp_generate apps/generate.cpp)
 target_link_libraries(three_dbp_generate PRIVATE three_dbp)
 threedbp_enable_warnings(three_dbp_generate)
 
+add_executable(three_dbp_benchmark apps/benchmark.cpp)
+target_link_libraries(three_dbp_benchmark PRIVATE three_dbp fmt::fmt)
+threedbp_enable_warnings(three_dbp_benchmark)
+
 # Tests
 if(THREEDBP_BUILD_TESTS)
     enable_testing()
@@ -100,8 +104,10 @@ if(THREEDBP_BUILD_TESTS)
     target_link_libraries(three_dbp_tests PRIVATE three_dbp GTest::gtest_main GTest::gmock)
     target_compile_definitions(three_dbp_tests PRIVATE
         THREEDBP_GENERATE_EXE="$<TARGET_FILE:three_dbp_generate>"
-        THREEDBP_PACK_EXE="$<TARGET_FILE:three_dbp_pack>")
-    add_dependencies(three_dbp_tests three_dbp_generate three_dbp_pack)
+        THREEDBP_PACK_EXE="$<TARGET_FILE:three_dbp_pack>"
+        THREEDBP_BENCHMARK_EXE="$<TARGET_FILE:three_dbp_benchmark>"
+        THREEDBP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    add_dependencies(three_dbp_tests three_dbp_generate three_dbp_pack three_dbp_benchmark)
     threedbp_enable_warnings(three_dbp_tests)
 
     include(GoogleTest)
@@ -114,7 +120,7 @@ install(TARGETS three_dbp
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS three_dbp_pack three_dbp_generate
+install(TARGETS three_dbp_pack three_dbp_generate three_dbp_benchmark
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

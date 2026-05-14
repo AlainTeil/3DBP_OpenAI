@@ -22,6 +22,14 @@ namespace {
 #define THREEDBP_PACK_EXE "three_dbp_pack"
 #endif
 
+#ifndef THREEDBP_BENCHMARK_EXE
+#define THREEDBP_BENCHMARK_EXE "three_dbp_benchmark"
+#endif
+
+#ifndef THREEDBP_SOURCE_DIR
+#define THREEDBP_SOURCE_DIR "."
+#endif
+
 struct CommandResult {
     int exit_code{0};
     std::string stdout_text;
@@ -124,6 +132,26 @@ TEST(CliGolden, PackStdoutSummaryForFeasibleInstance) {
     EXPECT_TRUE(result.stderr_text.empty());
 }
 
+TEST(CliGolden, PackListsAvailableAlgorithms) {
+    const auto dir = test_dir("pack_list_algorithms");
+
+    const auto result = run_command(command_with_args(THREEDBP_PACK_EXE, "--list-algorithms"), dir);
+
+    EXPECT_EQ(result.exit_code, 0) << result.stderr_text;
+    EXPECT_EQ(result.stdout_text,
+              "Available algorithms:\n"
+              "  ffd         offline deterministic greedy first-fit, descending volume\n"
+              "  nfdh        offline deterministic greedy first-fit, descending height then volume\n"
+              "  layer       offline deterministic greedy first-fit, descending height then base area\n"
+              "  guillotine  offline deterministic greedy packer with guillotine residual spaces\n"
+              "  maxspace    offline deterministic greedy first-fit, largest side then volume\n"
+              "  meta-ga     offline stochastic genetic search over greedy orderings\n"
+              "  meta-grasp  offline stochastic randomized greedy ordering search\n"
+              "  meta-sa     offline stochastic simulated annealing over greedy orderings\n"
+              "  online-ffd  online deterministic greedy first-fit in input order\n");
+    EXPECT_TRUE(result.stderr_text.empty());
+}
+
 TEST(CliGolden, PackWritesResultJsonAndCsvWithStableFields) {
     const auto dir = test_dir("pack_files");
     const auto instance_path = dir / "instance.json";
@@ -204,4 +232,26 @@ TEST(CliGolden, InvalidCliInputReturnsErrorExitCode) {
         command_with_args(THREEDBP_PACK_EXE, "--input " + shell_quote(instance_path) + " --algo unknown"), pack_dir);
     EXPECT_EQ(pack_result.exit_code, 1);
     EXPECT_THAT(pack_result.stderr_text, ::testing::HasSubstr("Unknown algorithm: unknown"));
+}
+
+TEST(CliGolden, BenchmarkCorpusWritesReport) {
+    const auto dir = test_dir("benchmark");
+    const auto report_path = dir / "benchmark.csv";
+    const auto corpus_path = std::filesystem::path(THREEDBP_SOURCE_DIR) / "benchmarks" / "corpus";
+
+    const auto result = run_command(command_with_args(THREEDBP_BENCHMARK_EXE, "--corpus " + shell_quote(corpus_path) +
+                                                                                  " --seed 7 --iterations 2 --output " +
+                                                                                  shell_quote(report_path)),
+                                    dir);
+
+    EXPECT_EQ(result.exit_code, 0) << result.stderr_text;
+    EXPECT_TRUE(result.stdout_text.empty());
+    EXPECT_TRUE(result.stderr_text.empty());
+
+    const auto report = read_text(report_path);
+    EXPECT_THAT(report, ::testing::StartsWith("instance,algorithm,status,elapsed_ms,bins_used,boxes_total,"));
+    EXPECT_THAT(report, ::testing::HasSubstr("dense_layers.json,ffd,"));
+    EXPECT_THAT(report, ::testing::HasSubstr("mixed_constraints.json,meta-ga,"));
+    EXPECT_THAT(report, ::testing::HasSubstr("partial_pressure.json,online-ffd,"));
+    EXPECT_THAT(report, ::testing::HasSubstr(",true\n"));
 }

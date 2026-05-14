@@ -1,0 +1,13 @@
+{
+  "bins": [
+    {"id": "bin-0", "size": {"w": 10, "l": 10, "h": 10}}
+  ],
+  "boxes": [
+    {"id": "fits-0", "size": {"w": 5, "l": 5, "h": 5}},
+    {"id": "fits-1", "size": {"w": 5, "l": 5, "h": 5}},
+    {"id": "fits-2", "size": {"w": 5, "l": 5, "h": 5}},
+    {"id": "fits-3", "size": {"w": 5, "l": 5, "h": 5}},
+    {"id": "wide-0", "size": {"w": 11, "l": 4, "h": 4}},
+    {"id": "tall-0", "size": {"w": 4, "l": 4, "h": 11}, "this_side_up": true}
+  ]
+}

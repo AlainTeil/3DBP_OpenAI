@@ -18,6 +18,10 @@ Preset-based builds are also available:
 cmake --preset debug
 cmake --build --preset debug
 ctest --preset debug
+
+cmake --preset release
+cmake --build --preset release
+ctest --test-dir build/release --output-on-failure
 ```
 
 Sanitizer builds use the `asan-ubsan` preset:
@@ -38,12 +42,14 @@ The test suite covers:
 - Packer behavior across all algorithms, including adversarial `no_stack`, `this_side_up`, partial, and infeasible cases.
 - Validation regression cases for duplicate placements, unknown IDs, out-of-bounds placements, illegal rotations, overlap, and stacking violations.
 - Deterministic randomized property-style checks that generated packings remain valid and that status, stats, placements, and unplaced IDs stay consistent.
-- CLI golden-output checks for stdout summaries, generated files, CSV output, exit codes, and installed-package smoke testing.
+- CLI golden-output checks for stdout summaries, generated files, CSV output, benchmark reports, and exit codes.
+- Installed-package smoke testing verifies the exported CMake package from an external consumer project.
 
 ## CLI Usage
-Two executables are produced in the selected CMake build directory:
+Three executables are produced in the selected CMake build directory:
 - `three_dbp_generate` – random instance generator
 - `three_dbp_pack` – run a packing algorithm on a JSON instance
+- `three_dbp_benchmark` – run all algorithms over a fixed benchmark corpus and emit a CSV report
 
 ### Generate instances
 ```bash
@@ -69,11 +75,20 @@ Options:
   --verbose 0|1|2 --csv placements.csv
 ```
 Notes:
+- Use `--list-algorithms` to print the supported algorithm names and a short description.
 - `--iterations` is used by metaheuristics (GA/GRASP/SA).
 - If `--output` is omitted, a summary is printed to stdout.
 - `--verbose 1` adds stats/metadata; `--verbose 2` also prints per-bin layout.
 - `--csv` writes placements as `bin_id,box_id,x,y,z,w,l,h`.
 - Exit code is `0` for `feasible`, `2` for `partial`, `infeasible`, or `invalid`, and `1` for CLI/input/runtime errors.
+
+### Benchmark corpus
+```bash
+./three_dbp_benchmark --corpus benchmarks/corpus --seed 42 --iterations 50 --output benchmark.csv
+```
+The benchmark runner loads each corpus instance, runs every algorithm, and writes report-only metrics:
+`instance,algorithm,status,elapsed_ms,bins_used,boxes_total,boxes_placed,boxes_unplaced,fill_ratio,valid`.
+The checked-in corpus currently includes dense layering, mixed constraint, and partial-pressure cases. Benchmark results are intended for comparison and trend tracking; CI does not fail on runtime or packing-quality thresholds.
 
 ## JSON Format
 Instance:
@@ -120,15 +135,19 @@ Result status values are:
 The `feasible` boolean is retained as a compatibility shortcut for `status == "feasible"`; new integrations should prefer `status` and `unplaced_box_ids`.
 
 ## Algorithms
-- `ffd`: greedy first-fit using boxes sorted by descending volume.
-- `nfdh`: greedy first-fit using boxes sorted by descending height, then volume. This is a height-ordered heuristic rather than a full canonical NFDH layer implementation.
-- `layer`: greedy first-fit using boxes sorted by descending height, then base area. This is a layered ordering heuristic over the shared free-space packer.
-- `guillotine`: greedy first-fit with disjoint guillotine-style residual spaces.
-- `maxspace`: greedy first-fit using boxes sorted by largest side, then volume. This is a maximal-space-inspired ordering heuristic, not an exact maximal-empty-space solver.
-- `meta-ga`: permutation search using order crossover and mutation over the greedy packer.
-- `meta-grasp`: randomized greedy ordering search over the greedy packer.
-- `meta-sa`: simulated annealing over box orderings.
-- `online-ffd`: greedy first-fit in stream order with no reordering.
+All algorithms use the same public `pack()` result contract: they validate the input instance, report `feasible`, `partial`, `infeasible`, or `invalid`, populate `unplaced_box_ids`, and run final result validation before returning.
+
+| CLI name | Mode | Determinism | Ordering/search | Iterations used | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `ffd` | Offline | Deterministic | Greedy first-fit, boxes sorted by descending volume | No | General-purpose baseline heuristic. |
+| `nfdh` | Offline | Deterministic | Greedy first-fit, boxes sorted by descending height then volume | No | Height-ordered heuristic rather than a full canonical NFDH layer implementation. |
+| `layer` | Offline | Deterministic | Greedy first-fit, boxes sorted by descending height then base area | No | Layered ordering heuristic over the shared free-space packer. |
+| `guillotine` | Offline | Deterministic | Greedy first-fit with disjoint guillotine-style residual spaces | No | Fast constructive heuristic that favors simple residual-space splits. |
+| `maxspace` | Offline | Deterministic | Greedy first-fit, boxes sorted by largest side then volume | No | Maximal-space-inspired ordering heuristic, not an exact maximal-empty-space solver. |
+| `meta-ga` | Offline | Stochastic | Genetic permutation search using order crossover and mutation over the greedy packer | Yes | Uses `--seed` and `--iterations`; better search coverage costs more runtime. |
+| `meta-grasp` | Offline | Stochastic | Randomized greedy ordering search over the greedy packer | Yes | Uses `--seed` and `--iterations`; useful for sampling alternatives to fixed orderings. |
+| `meta-sa` | Offline | Stochastic | Simulated annealing over box orderings | Yes | Uses `--seed` and `--iterations`; accepts some worse intermediate orderings during search. |
+| `online-ffd` | Online | Deterministic | Greedy first-fit in input stream order with no reordering | No | Preserves input order for stream-like scenarios; usually less flexible than offline sorting/search. |
 
 ## Constraints and assumptions
 - Integer dimensions only; 90-degree rotations. `this_side_up` fixes the height axis; `no_stack` forbids placing boxes above that box.
@@ -171,7 +190,7 @@ The GitHub Actions workflow runs:
 - Multiple heuristics (offline, online, meta) under one interface and CLI.
 - Dependency-light: uses fmt, nlohmann/json, GTest/GMock via FetchContent.
 - JSON I/O for easy integration; simple CLI for generation and packing.
-- Tests covering core geometry, I/O regressions, adversarial constraints, randomized packing invariants, edge cases, CLI golden outputs, and pipeline flows.
+- Tests covering core geometry, I/O regressions, adversarial constraints, randomized packing invariants, edge cases, CLI golden outputs, benchmark reports, and pipeline flows.
 - Runtime validation prevents invalid placements from being reported as feasible.
 
 ## Weaknesses / limitations
