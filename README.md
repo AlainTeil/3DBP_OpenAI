@@ -175,15 +175,23 @@ The public validation helpers live in `bp/validation.hpp`:
 - `can_place_with(candidate, box, existing, instance)` is used by packers to reject candidate placements that overlap or violate `no_stack`.
 
 ## CMake package usage
-After installation, consumers can use:
+Configure, build, and install a preset build before consuming the CMake package:
+```bash
+cmake --preset debug
+cmake --build --preset debug
+cmake --install build/debug --prefix build/debug/install
+```
+
+Installed consumers can then use:
 ```cmake
 find_package(three_dbp CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE three_dbp::three_dbp)
 ```
 
+Point `CMAKE_PREFIX_PATH` at the install prefix so CMake can find `three_dbpConfig.cmake`. The package exports the `three_dbp::three_dbp` library target and installs the CLI executables under the prefix `bin` directory.
+
 The repository includes an installed-package smoke test in `tests/package_smoke` that exercises this flow from outside the main build tree:
 ```bash
-cmake --install build/debug --prefix build/debug/install
 cmake -S tests/package_smoke -B build/package-smoke -DCMAKE_PREFIX_PATH="$PWD/build/debug/install"
 cmake --build build/package-smoke
 ./build/package-smoke/three_dbp_package_smoke
@@ -212,6 +220,23 @@ The GitHub Actions workflow runs:
 - Several algorithm IDs are heuristic variants over a shared greedy free-space packer rather than full textbook implementations.
 
 ## Formatting and analysis
-- clang-format: see .clang-format
-- clang-tidy: see .clang-tidy
-- Doxygen: configure a docs-enabled build, then run `cmake --build build --target docs` (if Doxygen is available). The provided presets set `THREEDBP_BUILD_DOCS=OFF`.
+Run the same formatting and static-analysis commands used by CI with:
+```bash
+find include src apps tests \( -name '*.cpp' -o -name '*.hpp' \) -print | xargs clang-format --dry-run --Werror
+cppcheck --enable=warning,style,performance,portability --std=c++20 --suppress=missingIncludeSystem -I include src apps tests
+```
+
+The clang-format command is enforced with `--Werror`. The cppcheck command is currently report-only because CI does not pass `--error-exitcode`.
+
+To apply formatting locally, run:
+```bash
+find include src apps tests \( -name '*.cpp' -o -name '*.hpp' \) -print | xargs clang-format -i
+```
+
+The repository also includes a `.clang-tidy` profile for local editor or manual `clang-tidy` runs, but clang-tidy is not currently part of CI.
+
+The provided build presets set `THREEDBP_BUILD_DOCS=OFF`. To generate Doxygen API docs, configure a docs-enabled build tree and build the `docs` target:
+```bash
+cmake -S . -B build/docs -DTHREEDBP_BUILD_TESTS=OFF -DTHREEDBP_BUILD_DOCS=ON
+cmake --build build/docs --target docs
+```
