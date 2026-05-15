@@ -77,6 +77,7 @@ threedbp_enable_warnings(three_dbp_generate)
 
 add_executable(three_dbp_benchmark apps/benchmark.cpp)
 target_link_libraries(three_dbp_benchmark PRIVATE three_dbp fmt::fmt)
+target_compile_definitions(three_dbp_benchmark PRIVATE THREEDBP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 threedbp_enable_warnings(three_dbp_benchmark)
 
 # Tests

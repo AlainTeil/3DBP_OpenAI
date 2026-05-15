@@ -17,6 +17,10 @@
 
 namespace {
 
+#ifndef THREEDBP_SOURCE_DIR
+#define THREEDBP_SOURCE_DIR ""
+#endif
+
 struct AlgorithmSpec {
     bp::AlgorithmId id;
     const char *name;
@@ -80,19 +84,27 @@ std::vector<std::filesystem::path> collect_inputs(const Args &args) {
         return args.inputs;
     }
 
-    if (!std::filesystem::is_directory(args.corpus_dir)) {
+    auto corpus_dir = args.corpus_dir;
+    if (!std::filesystem::is_directory(corpus_dir) && corpus_dir.is_relative()) {
+        const auto source_relative = std::filesystem::path(THREEDBP_SOURCE_DIR) / corpus_dir;
+        if (!std::filesystem::path(THREEDBP_SOURCE_DIR).empty() && std::filesystem::is_directory(source_relative)) {
+            corpus_dir = source_relative;
+        }
+    }
+
+    if (!std::filesystem::is_directory(corpus_dir)) {
         throw std::runtime_error("Benchmark corpus directory not found: " + args.corpus_dir.string());
     }
 
     std::vector<std::filesystem::path> inputs;
-    for (const auto &entry : std::filesystem::directory_iterator(args.corpus_dir)) {
+    for (const auto &entry : std::filesystem::directory_iterator(corpus_dir)) {
         if (entry.is_regular_file() && entry.path().extension() == ".json") {
             inputs.push_back(entry.path());
         }
     }
     std::sort(inputs.begin(), inputs.end());
     if (inputs.empty()) {
-        throw std::runtime_error("Benchmark corpus directory contains no JSON instances: " + args.corpus_dir.string());
+        throw std::runtime_error("Benchmark corpus directory contains no JSON instances: " + corpus_dir.string());
     }
     return inputs;
 }

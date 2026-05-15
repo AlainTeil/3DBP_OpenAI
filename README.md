@@ -92,11 +92,14 @@ Notes:
 
 ### Benchmark corpus
 ```bash
+./build/debug/three_dbp_benchmark --corpus benchmarks/corpus --seed 42 --iterations 50 --output benchmark.csv
+
+cd build/asan-ubsan
 ./three_dbp_benchmark --corpus benchmarks/corpus --seed 42 --iterations 50 --output benchmark.csv
 ```
 The benchmark runner loads each corpus instance, runs every algorithm, and writes report-only metrics:
 `instance,algorithm,status,elapsed_ms,bins_used,boxes_total,boxes_placed,boxes_unplaced,fill_ratio,valid`.
-The checked-in corpus currently includes dense layering, mixed constraint, and partial-pressure cases. Benchmark results are intended for comparison and trend tracking; CI does not fail on runtime or packing-quality thresholds.
+The checked-in corpus currently includes dense layering, mixed constraint, and partial-pressure cases. Build-tree benchmark executables also resolve the checked-in corpus from the source root, so `--corpus benchmarks/corpus` works from the repository root or from a preset build directory such as `build/debug` or `build/asan-ubsan`. Benchmark results are intended for comparison and trend tracking; CI does not fail on runtime or packing-quality thresholds.
 
 ## JSON Format
 Instance:

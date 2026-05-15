@@ -255,3 +255,23 @@ TEST(CliGolden, BenchmarkCorpusWritesReport) {
     EXPECT_THAT(report, ::testing::HasSubstr("partial_pressure.json,online-ffd,"));
     EXPECT_THAT(report, ::testing::HasSubstr(",true\n"));
 }
+
+TEST(CliGolden, BenchmarkCorpusCanBeResolvedFromBuildDirectory) {
+    const auto dir = test_dir("benchmark_relative_corpus");
+    const auto report_path = dir / "benchmark.csv";
+    const auto benchmark_dir = std::filesystem::path(THREEDBP_BENCHMARK_EXE).parent_path();
+
+    const auto result = run_command(
+        command_with_args(THREEDBP_BENCHMARK_EXE,
+                          "--corpus benchmarks/corpus --seed 7 --iterations 2 --output " + shell_quote(report_path)),
+        benchmark_dir);
+
+    EXPECT_EQ(result.exit_code, 0) << result.stderr_text;
+    EXPECT_TRUE(result.stdout_text.empty());
+    EXPECT_TRUE(result.stderr_text.empty());
+
+    const auto report = read_text(report_path);
+    EXPECT_THAT(report, ::testing::StartsWith("instance,algorithm,status,elapsed_ms,bins_used,boxes_total,"));
+    EXPECT_THAT(report, ::testing::HasSubstr("dense_layers.json,ffd,"));
+    EXPECT_THAT(report, ::testing::HasSubstr("partial_pressure.json,online-ffd,"));
+}
