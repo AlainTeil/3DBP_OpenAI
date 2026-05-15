@@ -28,9 +28,10 @@ Instance random_instance(std::mt19937 &rng, int case_index) {
 
     const int box_count = box_count_dist(rng);
     for (int box_index = 0; box_index < box_count; ++box_index) {
-        auto &dim_dist = wide_box_dist(rng) ? wide_dim_dist : small_dim_dist;
+        const bool use_wide_dims = wide_box_dist(rng);
+        auto next_dim = [&]() { return use_wide_dims ? wide_dim_dist(rng) : small_dim_dist(rng); };
         instance.boxes.push_back(Box{.id = "box-" + std::to_string(case_index) + "-" + std::to_string(box_index),
-                                     .size = Vec3{dim_dist(rng), dim_dist(rng), dim_dist(rng)},
+                                     .size = Vec3{next_dim(), next_dim(), next_dim()},
                                      .this_side_up = this_side_up_dist(rng),
                                      .no_stack = no_stack_dist(rng)});
     }

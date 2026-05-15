@@ -34,10 +34,10 @@ constexpr std::array<AlgorithmSpec, 9> algorithms{{
 }};
 
 bp::AlgorithmId parse_algo(const std::string &name) {
-    for (const auto &algorithm : algorithms) {
-        if (name == algorithm.name) {
-            return algorithm.id;
-        }
+    const auto it = std::find_if(algorithms.begin(), algorithms.end(),
+                                 [&name](const AlgorithmSpec &algorithm) { return name == algorithm.name; });
+    if (it != algorithms.end()) {
+        return it->id;
     }
     throw std::runtime_error("Unknown algorithm: " + name);
 }
